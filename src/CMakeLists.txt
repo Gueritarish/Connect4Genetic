@@ -1,0 +1,9 @@
+add_executable(connect4
+               game.c
+               game.h
+               input.c
+               input.h
+               genetics.c
+               genetics.h
+               utils.c
+               utils.h)
