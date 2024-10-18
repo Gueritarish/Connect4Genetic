@@ -14,7 +14,7 @@
 #define NO_PIECE 0
 #define YELLOW_PIECE 1
 #define RED_PIECE -1
-#define IA_COLOR RED_PIECE
+#define IA_COLOR YELLOW_PIECE
 
 #define WHITE "\033[0m"
 #define RED "\033[0;31m"

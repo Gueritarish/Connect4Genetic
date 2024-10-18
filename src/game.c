@@ -13,6 +13,7 @@
 void display(int frame[HEIGHT][LENGTH], int color_turn)
 {
     printf("\n\n\n\n");
+    printf(" 1 2 3 4 5 6 7 \n");
     for (int i = 0; i < HEIGHT; i++)
     {
         printf("%s|",WHITE);
@@ -36,6 +37,7 @@ void display(int frame[HEIGHT][LENGTH], int color_turn)
     for (int i = 0; i < LENGTH - 1; i++)
         printf("__");
     printf("_|\n");
+    printf("|1 2 3 4 5 6 7|\n");
     printf("|");
     if (check_game_state(frame) == DRAW)
         printf("    DRAW    ");
@@ -44,7 +46,7 @@ void display(int frame[HEIGHT][LENGTH], int color_turn)
         if (color_turn == YELLOW_PIECE)
         {
             if (check_game_state(frame) == RED_PIECE)
-                printf("  RED  WIN!");
+                printf("  RED  WIN! ");
             else
                 printf(" YELLOW TURN");
         }

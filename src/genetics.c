@@ -18,6 +18,53 @@ void initialize_population(Population* population) {
         population->individuals[i].fitness = 0.0;
     }
 }
+void evaluate_fitness_population(Population* population)
+{
+    float victory[POPULATION_SIZE] = {0};
+    for (int i = 0; i < POPULATION_SIZE - 1; i++)
+    {
+        for (int j = i + 1; j < POPULATION_SIZE; j++)
+        {
+            int result = play_game(&population->individuals[i],&population->individuals[j]);
+            if (result == YELLOW_PIECE)
+            {
+                victory[i]++;
+                victory[j]--;
+            }
+            if (result == RED_PIECE)
+            {
+                victory[j] += 1.2;
+                victory[i] -= 1.2;
+
+            }
+            else
+            {
+                victory[i] += 0.4;
+                victory[j] += 0.4;
+            }
+
+            result = play_game(&population->individuals[j],&population->individuals[i]);
+            if (result == YELLOW_PIECE)
+            {
+                victory[i]++;
+                victory[j]--;
+            }
+            if (result == RED_PIECE)
+            {
+                victory[i] += 1.2;
+                victory[j] -= 1.2;
+
+            }
+            else
+            {
+                victory[i] += 0.4;
+                victory[j] += 0.4;
+            }
+        }
+    }
+    for (int i = 0; i < POPULATION_SIZE; i++)
+        population->individuals[i].fitness = victory[i];
+}
 
 void evaluate_fitness(Individual* individual, Individual* best_previous)
 {
@@ -30,7 +77,15 @@ void evaluate_fitness(Individual* individual, Individual* best_previous)
     for (int i = 0; i < games_to_play; i++) {
         // Chaque jeu est joué avec `individual` comme joueur 1 et `best_previous` comme joueur 2
         int result = play_game(individual, best_previous);
-
+        // Analyser le résultat : 1 = victoire, -1 = défaite, 0 = match nul
+        if (result == 1) {
+            wins++;
+        } else if (result == -1) {
+            losses++;
+        } else {
+            draws++;
+        }
+        result = play_game(best_previous, individual);
         // Analyser le résultat : 1 = victoire, -1 = défaite, 0 = match nul
         if (result == 1) {
             wins++;
@@ -117,6 +172,11 @@ Individual get_best(Population* population)
                     winp1++;
                 if (res == RED_PIECE)
                     winp2++;
+                res = play_game(&population->individuals[list_winner[n + 1]],&population->individuals[list_winner[n]]);
+                if (res == YELLOW_PIECE)
+                    winp1++;
+                if (res == RED_PIECE)
+                    winp2++;
             }
             if (winp1 >= winp2)
             {
@@ -132,37 +192,63 @@ Individual get_best(Population* population)
 
 void evolve_population(Population* population) {
     Population new_population;
-    Individual best_former = get_best(population);
+    // Individual best_former = get_best(population);
+
+    // for (int i = 0; i < POPULATION_SIZE - 2; i += 2)
+    // {
+    //     Individual child1, child2;
+
+    //     crossover(&best_former,&best_former,&child1,&child2);
+    //     mutate(&child1);
+    //     mutate(&child2);
+    //     evaluate_fitness(&child1, &best_former);
+    //     evaluate_fitness(&child2, &best_former);
+    //     new_population.individuals[i] = child1;
+    //     new_population.individuals[i] = child2;
+    // }
+    // new_population.individuals[POPULATION_SIZE - 2] = best_former;
+    // new_population.individuals[POPULATION_SIZE - 1] = best_former;
 
     sort_population_by_fitness(population);
     // Boucle pour générer la nouvelle population
     for (int i = 0; i < POPULATION_SIZE / 2; i += 2) {
-        // Sélectionner deux parents avec la sélection par roulette
-        Individual* parent1 = &population->individuals[i];
-        Individual* parent2 = &population->individuals[i + 1];
+       // Sélectionner deux parents avec la sélection par roulette
+       Individual* parent1 = &population->individuals[i];
+       Individual* parent2 = &population->individuals[i + 1];
 
-        Individual child1, child2;
+       Individual child1, child2;
 
-        // Effectuer le croisement pour créer deux enfants
-        crossover(parent1, parent2, &child1, &child2);
+       // Effectuer le croisement pour créer deux enfants
+       crossover(parent1, parent2, &child1, &child2);
 
-        // Appliquer la mutation sur les enfants
-        mutate(&child1);
-        mutate(&child2);
+       // Appliquer la mutation sur les enfants
+       mutate(&child1);
+       mutate(&child2);
 
-        // Évaluer la fitness des enfants
-        evaluate_fitness(&child1, &best_former);
-        evaluate_fitness(&child2, &best_former);
+       // Évaluer la fitness des enfants
+       //evaluate_fitness(&child1, &best_former);
+       //evaluate_fitness(&child2, &best_former);
 
-        // Ajouter les enfants à la nouvelle population
-        new_population.individuals[i] = child1;
-        new_population.individuals[i + 1] = child2;
-        new_population.individuals[2 * i] = *parent1;
-        new_population.individuals[2 * i + 1] = *parent2;
+       // Ajouter les enfants à la nouvelle population
+       new_population.individuals[i] = child1;
+       new_population.individuals[i + 1] = child2;
+       new_population.individuals[2 * i] = *parent1;
+       new_population.individuals[2 * i + 1] = *parent2;
     }
+    evaluate_fitness_population(&new_population);
 
     // Remplacer l'ancienne population par la nouvelle population
     *population = new_population;
+}
+
+void mix_population(Population* population1, Population* population2)
+{
+    for(int i = 0; i < POPULATION_SIZE; i += 2)
+    {
+        Individual temp = population1->individuals[i];
+        population1->individuals[i] = population2->individuals[i];
+        population2->individuals[i] = temp;
+    }
 }
 
 void run_genetic_algorithm() {
@@ -171,7 +257,8 @@ void run_genetic_algorithm() {
     initialize_population(&population); // Assurez-vous d'avoir une fonction pour cela
 
     // Boucle sur le nombre de générations
-    for (int generation = 0; generation < GENERATIONS; generation++) {
+    for (int generation = 0; generation < GENERATIONS; generation++)
+    {
         // Par exemple, afficher la meilleure fitness de la génération actuelle
         double best_fitness = population.individuals[0].fitness; // À ajuster pour trouver le meilleur
         for (int i = 1; i < POPULATION_SIZE; i++) {

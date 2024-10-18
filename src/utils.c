@@ -34,48 +34,79 @@ void simulate_move(int board[HEIGHT][LENGTH], int col, int player) {
     }
 }
 
+int lead_to_lose(int column, int board[HEIGHT][LENGTH], int color)
+{
+    int height = 0;
+    int lose = 0;
+    for (int row = HEIGHT - 1; row >= 0; row--)
+    {
+        if (board[row][column] == 0)
+        {
+            board[row][column] = color;  // Simuler le coup du joueur
+            height = row;
+            break;
+        }
+    }
+    for (int col = 0; col < LENGTH; col++)
+    {
+        lose = is_winning_move(board, -color, col);
+        if (lose)
+            break;
+    }
+    board[height][column] = 0;
+    return lose;
+}
+
 int choose_move(Individual* individual, int board[HEIGHT][LENGTH], int color) {
     double max_score = -RAND_MAX;        // Stocker le score maximal
-    int best_column = 0;                 // Colonne avec le score le plus élevé
+    int good_column[LENGTH] = {0};
+    int len_column = 0;
+    for (int i = 0; i < LENGTH; i++)
+    {
+        if (board[0][i] == 0)
+        {
+            good_column[len_column] = i;
+            len_column++;
+        }
+    }
+    int best_column = good_column[0]; // Colonne avec le score le plus élevé
     
     // Parcourir chaque colonne pour évaluer les mouvements possibles
-    for (int col = 0; col < LENGTH; col++) {
+    for (int col = 0; col < len_column; col++) {
         // Vérifier si la colonne est jouable
-        if (!is_column_playable(board, col)) {
+        if (!is_column_playable(board, good_column[col])) {
             continue;  // La colonne est pleine, on la saute
         }
 
         // Vérifier si l'individu peut gagner en jouant dans cette colonne
-        if (is_winning_move(board, color, col)) {  // '1' représente l'individu
-            return col;  // Si oui, jouer immédiatement ici
+        if (is_winning_move(board, color, good_column[col])) {  // '1' représente l'individu
+            return good_column[col];  // Si oui, jouer immédiatement ici
         }
 
         // Vérifier si l'adversaire peut gagner au prochain tour et bloquer
-        if (is_winning_move(board, color, col)) {  // '2' représente l'adversaire
-            return col;  // Bloquer cette colonne
+        if (is_winning_move(board, -color, good_column[col])) {  // '2' représente l'adversaire
+            return good_column[col];  // Bloquer cette colonne
         }
-
         // Sinon, évaluer la colonne comme d'habitude avec les poids
         double score = 0.0;
         
         // Utiliser les poids pour évaluer chaque colonne
         for (int row = 0; row < HEIGHT; row++) {
-            if (board[row][col] == 0) {
+            if (board[row][good_column[col]] == 0) {
                 // Calculer un score basé sur la position vide (ajuster selon ta stratégie)
-                int weight_index = col * HEIGHT + row;
+                int weight_index = good_column[col] * HEIGHT + row;
                 score += individual->weights[weight_index];
-            } else if (board[row][col] == color) {
+            } else if (board[row][good_column[col]] == color) {
                 // Bonus pour les pions alliés
                 score += individual->weights[col] * 0.5;
-            } else if (board[row][col] == -color) {
+            } else if (board[row][good_column[col]] == -color) {
                 // Pénalité pour les pions adverses
-                score -= individual->weights[col] * 0.5;
+                score -= individual->weights[good_column[col]] * 0.5;
             }
         }
-
-        if (score > max_score) {
+        if (score > max_score && !lead_to_lose(good_column[col], board, color)) {
             max_score = score;
-            best_column = col;
+            best_column = good_column[col];
         }
     }
 
@@ -133,7 +164,9 @@ int play_game(Individual* player1, Individual* player2) {
     int board[HEIGHT][LENGTH] = { {0} }; // Plateau de jeu initialisé à vide
     int current_player = YELLOW_PIECE;   // Le joueur 1 commence (jeton jaune)
     int column;
-    while (1) {
+    int game_status = check_game_state(board);
+
+    while (game_status == RUNNING) {
         // Le joueur 1 (YELLOW_PIECE) joue
         if (DISPLAY_GAME)
             display(board, current_player);
@@ -144,26 +177,15 @@ int play_game(Individual* player1, Individual* player2) {
             column = choose_move(player2, board, current_player);
 
         simulate_move(board, column, current_player);
-
+        game_status = check_game_state(board);
         // Vérifier s'il y a un gagnant après chaque coup
-        int game_status = check_game_state(board);
         
         if (game_status != RUNNING && DISPLAY_GAME)
             display(board, current_player);
         
-        if (game_status == YELLOW_PIECE) {
-            return 1;  // Player 1 gagne
-        }
-        else if (game_status == RED_PIECE) {
-            return -1; // Player 2 gagne
-        }
-        else if (game_status == DRAW) {
-            return 0;  // Match nul
-        }
-
-        // Changer de joueur
         current_player = (current_player == YELLOW_PIECE) ? RED_PIECE : YELLOW_PIECE;
     }
+    return game_status;
 }
 
 
